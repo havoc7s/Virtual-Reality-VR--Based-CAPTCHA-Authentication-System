@@ -1,0 +1,209 @@
+using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using System.Collections;
+
+public class PieceInteractable : XRGrabInteractable
+{
+    [Header("Snap Settings")]
+    public Transform snapTarget;
+
+    public float snapDistance = 0.15f;
+
+    [Header("Tracking")]
+    public string pieceID;
+
+    [Header("Attempt Limit")]
+    public int maxWrongAttempts = 5;
+
+    // ✅ Global wrong placements counter
+    public static int TotalWrongPlacements = 0;
+
+    private Vector3 startPosition;
+    private Quaternion startRotation;
+
+    private bool isSnapped = false;
+
+    // Tracking
+    private float grabStartTime;
+
+    private int attemptCount = 0;
+
+    private int wrongAttempts = 0;
+
+    protected override void Awake()
+    {
+        base.Awake();
+
+        startPosition = transform.position;
+        startRotation = transform.rotation;
+    }
+
+    private void Start()
+    {
+        // ✅ Reset at start of challenge
+        TotalWrongPlacements = 0;
+    }
+
+    protected override void OnSelectEntered(
+        SelectEnterEventArgs args
+    )
+    {
+        base.OnSelectEntered(args);
+
+        grabStartTime = Time.time;
+
+        attemptCount++;
+
+        isSnapped = false;
+    }
+
+    protected override void OnSelectExited(
+        SelectExitEventArgs args
+    )
+    {
+        base.OnSelectExited(args);
+
+        if (snapTarget == null)
+            return;
+
+        float distance = Vector3.Distance(
+            transform.position,
+            snapTarget.position
+        );
+
+        // ✅ Correct placement
+        if (distance <= snapDistance)
+        {
+            SnapToTarget();
+        }
+        else
+        {
+            // ❌ Wrong placement
+            wrongAttempts++;
+
+            // ✅ Global counter
+            TotalWrongPlacements++;
+
+            Debug.Log(
+                $"Wrong attempt {wrongAttempts}/{maxWrongAttempts} for {pieceID}"
+            );
+
+            Debug.Log(
+                $"Total Wrong Placements: {TotalWrongPlacements}"
+            );
+
+            // ❌ Too many wrong placements
+            if (wrongAttempts >= maxWrongAttempts)
+            {
+                Debug.Log(
+                    "Too many wrong attempts - Access Denied!"
+                );
+
+                float elapsed =
+                    Time.time - grabStartTime;
+
+                StartCoroutine(
+                    SubmitAndRedirect(
+                        elapsed
+                    )
+                );
+
+                return;
+            }
+
+            ReturnToStart();
+        }
+    }
+
+    // ==========================================
+    // SUBMIT FAILURE
+    // ==========================================
+    private IEnumerator SubmitAndRedirect(
+        float elapsed
+    )
+    {
+        if (BackendManager.Instance != null)
+        {
+            int retryAttempts = 0;
+
+            int wrongPlacements =
+                TotalWrongPlacements;
+
+            yield return BackendManager.Instance.StartCoroutine(
+                BackendManager.Instance.SubmitResult(
+                    elapsed,
+                    retryAttempts,
+                    wrongPlacements
+                )
+            );
+        }
+
+        UnityEngine.SceneManagement.SceneManager.LoadScene(
+            "AccessDeniedScene"
+        );
+    }
+
+    // ==========================================
+    // SNAP OBJECT
+    // ==========================================
+    private void SnapToTarget()
+    {
+        transform.position =
+            snapTarget.position;
+
+        transform.rotation =
+            snapTarget.rotation;
+
+        isSnapped = true;
+
+        // Hide snap visual
+        Transform visual =
+            snapTarget.Find("Visual");
+
+        if (visual != null)
+            visual.gameObject.SetActive(false);
+
+        // Freeze rigidbody
+        Rigidbody rb =
+            GetComponent<Rigidbody>();
+
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+
+            rb.linearVelocity = Vector3.zero;
+
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        this.enabled = false;
+
+        float solveTime =
+            Time.time - grabStartTime;
+
+        Debug.Log(
+            $"Piece {pieceID} snapped! Time: {solveTime:F2}s"
+        );
+
+        GameManager.Instance?.OnPieceSnapped(
+            pieceID,
+            solveTime,
+            attemptCount
+        );
+
+        CarCaptchaManager.Instance?.OnPartPlaced(
+            pieceID
+        );
+    }
+
+    // ==========================================
+    // RETURN OBJECT
+    // ==========================================
+    private void ReturnToStart()
+    {
+        transform.position = startPosition;
+
+        transform.rotation = startRotation;
+    }
+}

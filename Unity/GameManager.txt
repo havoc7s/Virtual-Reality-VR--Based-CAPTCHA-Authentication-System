@@ -1,0 +1,59 @@
+using UnityEngine;
+using System.Collections.Generic;
+
+public class GameManager : MonoBehaviour
+{
+    public static GameManager Instance;
+
+    [Header("CAPTCHA Settings")]
+    public int totalPieces = 3;
+
+    private int snappedPieces = 0;
+    private float sessionStartTime;
+
+    private List<string> snappedPieceIDs = new List<string>();
+
+    private float totalSolveTime;
+    private int totalAttempts;
+
+    private void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+    }
+
+    private void Start()
+    {
+        sessionStartTime = Time.time;
+        Debug.Log("CAPTCHA Session Started");
+    }
+
+    public void OnPieceSnapped(string pieceID, float solveTime, int attempts)
+    {
+        if (snappedPieceIDs.Contains(pieceID)) return;
+
+        snappedPieceIDs.Add(pieceID);
+        snappedPieces++;
+
+        totalSolveTime += solveTime;
+        totalAttempts += attempts;
+
+        Debug.Log($"Piece {pieceID} snapped! ({snappedPieces}/{totalPieces})");
+
+        if (snappedPieces >= totalPieces)
+        {
+            OnCaptchaComplete();
+        }
+    }
+
+    private void OnCaptchaComplete()
+    {
+        Debug.Log("=== CAPTCHA COMPLETE ===");
+
+        UIManager uiManager = Object.FindFirstObjectByType<UIManager>();
+        if (uiManager != null)
+            uiManager.OnCaptchaSolved();
+    }
+}

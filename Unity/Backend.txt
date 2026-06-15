@@ -1,0 +1,176 @@
+using UnityEngine;
+using System.Collections;
+using UnityEngine.Networking;
+
+public class BackendManager : MonoBehaviour
+{
+    public static BackendManager Instance;
+
+    [Header("Backend Settings")]
+    public string backendURL = "https://5568-176-29-4-12.ngrok-free.app";
+
+    private string challengeToken = "";
+
+    public string CurrentToken => challengeToken;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void Start()
+    {
+        StartCoroutine(StartChallenge());
+    }
+
+    // =====================================
+    // START CHALLENGE
+    // =====================================
+    public IEnumerator StartChallenge()
+    {
+        string url = backendURL + "/start-challenge";
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("ngrok-skip-browser-warning", "true");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                ChallengeResponse response =
+                    JsonUtility.FromJson<ChallengeResponse>(
+                        request.downloadHandler.text
+                    );
+
+                challengeToken = response.challenge_token;
+
+                Debug.Log("✅ Token received: " + challengeToken);
+            }
+            else
+            {
+                Debug.LogError("❌ StartChallenge failed: " + request.error);
+            }
+        }
+    }
+
+    // =====================================
+    // SUBMIT RESULT
+    // =====================================
+    public IEnumerator SubmitResult(
+        float solveTime,
+        int retryAttempts,
+        int wrongPlacements
+    )
+    {
+        // ==============================
+        // CHECK TOKEN
+        // ==============================
+        if (string.IsNullOrEmpty(challengeToken))
+        {
+            Debug.LogWarning("⚠️ No token, requesting new one...");
+
+            yield return StartCoroutine(StartChallenge());
+        }
+
+        if (string.IsNullOrEmpty(challengeToken))
+        {
+            Debug.LogError("❌ Cannot submit: token unavailable.");
+            yield break;
+        }
+
+        string url = backendURL + "/submit-result";
+
+        // ==============================
+        // CREATE DATA
+        // ==============================
+        SubmitData data = new SubmitData
+        {
+            challenge_token = challengeToken,
+            solveTime = solveTime,
+            retryAttempts = retryAttempts,
+            wrongPlacements = wrongPlacements
+        };
+
+        string jsonData = JsonUtility.ToJson(data);
+
+        Debug.Log("📤 Submitting: " + jsonData);
+
+        // ==============================
+        // SEND REQUEST
+        // ==============================
+        using (UnityWebRequest request =
+               new UnityWebRequest(url, "POST"))
+        {
+            byte[] bodyRaw =
+                System.Text.Encoding.UTF8.GetBytes(jsonData);
+
+            request.uploadHandler =
+                new UploadHandlerRaw(bodyRaw);
+
+            request.downloadHandler =
+                new DownloadHandlerBuffer();
+
+            request.SetRequestHeader(
+                "Content-Type",
+                "application/json"
+            );
+
+            request.SetRequestHeader(
+                "ngrok-skip-browser-warning",
+                "true"
+            );
+
+            yield return request.SendWebRequest();
+
+            if (request.result ==
+                UnityWebRequest.Result.Success)
+            {
+                Debug.Log("✅ Submit success: "
+                    + request.downloadHandler.text);
+
+                // Replay protection
+                challengeToken = "";
+            }
+            else
+            {
+                Debug.LogError(
+                    "❌ Submit failed: "
+                    + request.responseCode
+                    + " | "
+                    + request.downloadHandler.text
+                );
+            }
+        }
+    }
+
+    // =====================================
+    // RESPONSE CLASSES
+    // =====================================
+
+    [System.Serializable]
+    public class ChallengeResponse
+    {
+        public string challenge_token;
+    }
+
+    [System.Serializable]
+    public class SubmitData
+    {
+        public string challenge_token;
+
+        public float solveTime;
+
+        public int retryAttempts;
+
+        public int wrongPlacements;
+    }
+}

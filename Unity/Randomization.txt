@@ -1,0 +1,148 @@
+using UnityEngine;
+using System.Collections.Generic;
+
+public class RandomizationManager : MonoBehaviour
+{
+    [Header("Pieces")]
+    public GameObject[] pieces;
+
+    [Header("Spawn Area")]
+    public float spawnRangeX = 0.4f;
+    public float spawnRangeZ = 0.3f;
+    public float spawnY = 0.65f;
+
+    [Header("Scale")]
+    public float minScale = 0.15f;
+    public float maxScale = 0.25f;
+
+    [Header("Spawn Safety")]
+    public float minimumDistanceBetweenPieces = 0.25f;
+    public int maxPositionAttempts = 30;
+
+    [Header("Colors")]
+    public Color[] availableColors = new Color[]
+    {
+        new Color(0f, 1f, 1f),      // Cyan
+        new Color(1f, 0f, 1f),      // Purple
+        new Color(1f, 1f, 0f),      // Yellow
+        new Color(0f, 1f, 0f),      // Green
+        new Color(1f, 0.5f, 0f),    // Orange
+        new Color(0f, 0.5f, 1f),    // Light Blue
+    };
+
+    private List<Vector3> usedPositions = new List<Vector3>();
+
+    private void Start()
+    {
+        RandomizePieces();
+    }
+
+    public void RandomizePieces()
+    {
+        usedPositions.Clear();
+
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            if (pieces[i] == null)
+                continue;
+
+            // ==============================
+            // RANDOM SAFE POSITION
+            // ==============================
+            Vector3 validPosition = GetValidPosition();
+
+            pieces[i].transform.position = validPosition;
+
+            // ==============================
+            // RANDOM SCALE
+            // ==============================
+            float randomScale = Random.Range(minScale, maxScale);
+
+            pieces[i].transform.localScale = new Vector3(
+                randomScale,
+                randomScale,
+                randomScale
+            );
+
+            // ==============================
+            // RANDOM ROTATION
+            // ==============================
+            pieces[i].transform.rotation = Quaternion.Euler(
+                0f,
+                Random.Range(0f, 360f),
+                0f
+            );
+
+            // ==============================
+            // RANDOM COLOR
+            // ==============================
+            Renderer renderer = pieces[i].GetComponent<Renderer>();
+
+            if (renderer != null)
+            {
+                renderer.material = new Material(renderer.material);
+
+                Color randomColor =
+                    availableColors[
+                        Random.Range(0, availableColors.Length)
+                    ];
+
+                renderer.material.color = randomColor;
+            }
+        }
+
+        Debug.Log("✅ CAPTCHA Randomized Safely!");
+    }
+
+    // =========================================
+    // GENERATE SAFE POSITION
+    // =========================================
+    private Vector3 GetValidPosition()
+    {
+        for (int attempt = 0; attempt < maxPositionAttempts; attempt++)
+        {
+            float randomX = Random.Range(-spawnRangeX, spawnRangeX);
+
+            float randomZ = Random.Range(-spawnRangeZ, spawnRangeZ);
+
+            Vector3 candidatePosition = new Vector3(
+                randomX,
+                spawnY,
+                randomZ
+            );
+
+            bool overlaps = false;
+
+            foreach (Vector3 usedPos in usedPositions)
+            {
+                float distance = Vector3.Distance(
+                    candidatePosition,
+                    usedPos
+                );
+
+                if (distance < minimumDistanceBetweenPieces)
+                {
+                    overlaps = true;
+                    break;
+                }
+            }
+
+            if (!overlaps)
+            {
+                usedPositions.Add(candidatePosition);
+                return candidatePosition;
+            }
+        }
+
+        // fallback
+        Vector3 fallbackPosition = new Vector3(
+            Random.Range(-spawnRangeX, spawnRangeX),
+            spawnY,
+            Random.Range(-spawnRangeZ, spawnRangeZ)
+        );
+
+        usedPositions.Add(fallbackPosition);
+
+        return fallbackPosition;
+    }
+}
