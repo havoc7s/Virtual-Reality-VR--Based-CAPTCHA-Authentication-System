@@ -7,7 +7,7 @@ public class BackendManager : MonoBehaviour
     public static BackendManager Instance;
 
     [Header("Backend Settings")]
-    public string backendURL = "https://5568-176-29-4-12.ngrok-free.app";
+    public string backendURL = "https://flask-production-2a78.up.railway.app";
 
     private string challengeToken = "";
 
