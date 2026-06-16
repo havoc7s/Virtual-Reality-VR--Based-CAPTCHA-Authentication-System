@@ -253,6 +253,40 @@ Hosted on Railway MySQL.
 Managed using GitHub.
 
 ---
+## APK Download and Testing
+
+A standalone APK version of the VR CAPTCHA Authentication System is available for testing purposes.
+
+Users who own a compatible VR headset can download and install the APK directly on their device to experience the project and evaluate its functionality.
+
+### Important Notice
+
+This project is currently under active development and is intended for academic and research purposes only.
+
+The current release should be considered a demonstration and testing version rather than a production-ready system.
+
+At this stage:
+
+* The project is not fully deployed for public use.
+* Some features may still be under development or refinement.
+* Cloud services and backend infrastructure are configured for project evaluation and demonstration purposes.
+* Future updates may include additional security features, performance optimizations, and production deployment support.
+
+We appreciate any feedback provided during testing and evaluation.
+
+### Installation
+
+1. Download the provided APK file.
+2. Transfer the APK to your VR headset.
+3. Enable installation from unknown sources if required.
+4. Install the application.
+5. Launch the VR CAPTCHA Authentication System and begin testing.
+
+### Compatibility
+
+The application has been developed and tested using Meta Quest VR devices. Compatibility with other VR platforms may vary.
+
+---
 
 ## Future Enhancements
 
