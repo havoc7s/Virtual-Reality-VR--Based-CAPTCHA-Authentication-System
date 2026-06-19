@@ -207,7 +207,7 @@ def submit_result():
         if is_used:
 
             return jsonify({
-                "error": "replay detected"
+                "error": "server error"
             }), 403
 
         # ==============================
@@ -331,7 +331,7 @@ def submit_result():
         conn.rollback()
 
         return jsonify({
-            "error": str(e)
+            "error": "server error"
         }), 500
 
     finally:
