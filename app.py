@@ -281,10 +281,7 @@ def submit_result():
         # ==============================
         #  BEHAVIOR METRICS
         # ==============================
-        reaction_time = solve_time / max(
-            wrong_placements,
-            1
-        )
+       reaction_time = solve_time / (wrong_placements + 1)
 
         movement_smoothness = 0.85
 
@@ -348,5 +345,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=5000,
-        debug=True
+        debug=False
     )
