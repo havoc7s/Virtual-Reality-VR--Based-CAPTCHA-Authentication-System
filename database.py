@@ -2,4 +2,4 @@ import mysql.connector
 from config import db_config
 
 def get_connection():
-    return mysql.connector.connect(**db_config)
+    return mysql.connector.connect(**db_config, connection_timeout=5)
