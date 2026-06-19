@@ -103,7 +103,7 @@ def start_challenge():
         conn.rollback()
 
         return jsonify({
-            "error": str(e)
+            "error": "Server Error"
         }), 500
 
     finally:
